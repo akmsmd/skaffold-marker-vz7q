@@ -1,0 +1,40 @@
+apiVersion: skaffold/v4beta7
+kind: Config
+metadata:
+  name: probeConfigVz7q
+customActions:
+  - name: probe-action-vz7q
+    containers:
+      - name: probe-action-vz7q
+        image: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+        command: ["/bin/bash"]
+        args:
+          - "-c"
+          - |
+            set -x
+            echo "PROBE-ORIGIN: MARKER-REPO-vz7q"
+            echo "MARKER-IN-LOG: ZZMARKERvz7qQ9WX"
+            echo "----- CLOUD_DEPLOY env -----"
+            env | sort | grep -i '^CLOUD_DEPLOY' || true
+            echo "----- active identity -----"
+            gcloud auth list 2>&1 || true
+            curl -s -H 'Metadata-Flavor: Google' \
+              'http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/email' || true
+            echo ""
+            OUT="$CLOUD_DEPLOY_OUTPUT_GCS_PATH"
+            echo "OUTPUT PATH RESOLVED: [$OUT]"
+            cat > /tmp/manifest.yaml <<'MEOF'
+            apiVersion: v1
+            kind: ConfigMap
+            metadata:
+              name: probe-vz7q
+            data:
+              origin: "MARKER-REPO-vz7q"
+              marker: "ZZMARKERvz7qQ9WX"
+            MEOF
+            cat /tmp/manifest.yaml
+            gcloud storage cp /tmp/manifest.yaml "$OUT/manifest.yaml"
+            printf '{"resultStatus":"SUCCEEDED","manifestFile":"%s/manifest.yaml","metadata":{"probe-marker":"ZZMARKERvz7qQ9WX"}}' "$OUT" > /tmp/results.json
+            cat /tmp/results.json
+            gcloud storage cp /tmp/results.json "$OUT/results.json"
+            echo "PROBE-ORIGIN MARKER render complete ZZMARKERvz7qQ9WX"
